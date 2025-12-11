@@ -1,0 +1,12 @@
+# Dev Tools Hooks Configuration for this project, test this repo
+
+pre-push:
+  enabled: true
+  skip_branch_validation: false
+
+  commands:
+    - name: "Check CLI Help"
+      run: "venv/bin/dev-hooks --help > /dev/null"
+
+    - name: "Check CLI Version"
+      run: "venv/bin/dev-hooks --version"
