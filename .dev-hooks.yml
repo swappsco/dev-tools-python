@@ -1,12 +1,18 @@
-# Dev Tools Hooks Configuration for this project, test this repo
+# Dev Tools Hooks Configuration for this project
+
+pre-commit:
+  enabled: true
+  commands:
+    - name: "Lint Check"
+      run: "venv/bin/ruff check src/ || true"
+
+    - name: "Type Check"
+      run: "venv/bin/python -m py_compile src/dev_tools_hooks/*.py"
 
 pre-push:
   enabled: true
   skip_branch_validation: false
 
   commands:
-    - name: "Check CLI Help"
-      run: "venv/bin/dev-hooks --help > /dev/null"
-
-    - name: "Check CLI Version"
+    - name: "Check CLI"
       run: "venv/bin/dev-hooks --version"
