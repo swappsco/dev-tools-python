@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# Conventional Commits validation hook
+# Valid prefixes: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+# Supports ClickUp ID prefix: CU-xxxxxxxxx - type: description
+
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# Types list
+types="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
+
+# Pattern for conventional commits
+# Format: type(optional-scope): description
+pattern="^($types)(\(.+\))?: .+"
+
+# Pattern with ClickUp ID prefix
+# Format: CU-xxxxxxxxx - type(optional-scope): description
+clickup_pattern="^CU-[a-zA-Z0-9]+ - ($types)(\(.+\))?: .+"
+
+# Allow merge commits
+merge_pattern="^Merge (branch|pull request|remote-tracking branch) .+"
+
+if echo "$commit_msg" | grep -qE "$merge_pattern"; then
+    exit 0
+fi
+
+if echo "$commit_msg" | grep -qE "$pattern"; then
+    exit 0
+fi
+
+if echo "$commit_msg" | grep -qE "$clickup_pattern"; then
+    exit 0
+fi
+
+# Colors optimized for macOS Terminal
+RED='\x1b[31m'
+GREEN='\x1b[32m'
+YELLOW='\x1b[33m'
+BLUE='\x1b[34m'
+MAGENTA='\x1b[35m'
+CYAN='\x1b[36m'
+WHITE='\x1b[37m'
+BOLD='\x1b[1m'
+DIM='\x1b[2m'
+NC='\x1b[0m'
+
+echo ""
+echo -e "${RED}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
+echo -e "${RED}${BOLD}│  ✖ COMMIT REJECTED                                           │${NC}"
+echo -e "${RED}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
+echo ""
+echo -e "${WHITE}${BOLD}Your message:${NC}"
+echo -e "  ${DIM}\"${commit_msg}\"${NC}"
+echo ""
+echo -e "${CYAN}${BOLD}Expected formats:${NC}"
+echo ""
+echo -e "  ${WHITE}1. Conventional Commit:${NC}"
+echo -e "     ${GREEN}<type>${NC}${DIM}:${NC} ${WHITE}<description>${NC}"
+echo -e "     ${GREEN}<type>${NC}${DIM}(${NC}${YELLOW}scope${NC}${DIM}):${NC} ${WHITE}<description>${NC}"
+echo ""
+echo -e "  ${WHITE}2. With ClickUp ID:${NC}"
+echo -e "     ${MAGENTA}CU-xxxxxxxxx${NC} ${DIM}-${NC} ${GREEN}<type>${NC}${DIM}:${NC} ${WHITE}<description>${NC}"
+echo -e "     ${MAGENTA}CU-xxxxxxxxx${NC} ${DIM}-${NC} ${GREEN}<type>${NC}${DIM}(${NC}${YELLOW}scope${NC}${DIM}):${NC} ${WHITE}<description>${NC}"
+echo ""
+echo -e "${CYAN}${BOLD}Valid types:${NC}"
+echo -e "  ${GREEN}feat${NC}      ${DIM}A new feature${NC}"
+echo -e "  ${GREEN}fix${NC}       ${DIM}A bug fix${NC}"
+echo -e "  ${GREEN}docs${NC}      ${DIM}Documentation only changes${NC}"
+echo -e "  ${GREEN}style${NC}     ${DIM}Code style changes (formatting, semicolons, etc)${NC}"
+echo -e "  ${GREEN}refactor${NC}  ${DIM}Code change that neither fixes a bug nor adds a feature${NC}"
+echo -e "  ${GREEN}perf${NC}      ${DIM}Performance improvement${NC}"
+echo -e "  ${GREEN}test${NC}      ${DIM}Adding or updating tests${NC}"
+echo -e "  ${GREEN}build${NC}     ${DIM}Changes to build system or dependencies${NC}"
+echo -e "  ${GREEN}ci${NC}        ${DIM}Changes to CI configuration${NC}"
+echo -e "  ${GREEN}chore${NC}     ${DIM}Other changes that don't modify src or test files${NC}"
+echo -e "  ${GREEN}revert${NC}    ${DIM}Reverts a previous commit${NC}"
+echo ""
+echo -e "${CYAN}${BOLD}Examples:${NC}"
+echo -e "  ${DIM}\$${NC} git commit -m \"${GREEN}feat${NC}: add user authentication\""
+echo -e "  ${DIM}\$${NC} git commit -m \"${GREEN}fix${NC}(${YELLOW}api${NC}): resolve timeout issue\""
+echo -e "  ${DIM}\$${NC} git commit -m \"${MAGENTA}CU-86b7kybxx${NC} - ${GREEN}feat${NC}: add git hooks\""
+echo -e "  ${DIM}\$${NC} git commit -m \"${MAGENTA}CU-86b7kybxx${NC} - ${GREEN}fix${NC}(${YELLOW}auth${NC}): resolve login bug\""
+echo ""
+exit 1

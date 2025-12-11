@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Branch name validation hook
+# Validates that branch names follow the ClickUp format: CU-XXXXXXXXXXX
+# Allows special branches: master, main, develop, staging, production
+
+branch_name=$(git symbolic-ref --short HEAD)
+
+# List of allowed branches without CU- prefix
+allowed_branches="^(master|main|develop|staging|production)$"
+
+# ClickUp pattern: CU- followed by exactly 9 alphanumeric characters
+clickup_pattern="^CU-[a-z0-9]{9}$"
+
+# Conventional branch pattern: type/description
+# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, hotfix, release
+conventional_pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|hotfix|release)/.+$"
+
+if echo "$branch_name" | grep -qE "$allowed_branches"; then
+    exit 0
+fi
+
+if echo "$branch_name" | grep -qE "$clickup_pattern"; then
+    exit 0
+fi
+
+if echo "$branch_name" | grep -qE "$conventional_pattern"; then
+    exit 0
+fi
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m' # No Color
+
+echo ""
+echo -e "${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${RED}║${NC}  ${BOLD}❌ PUSH REJECTED${NC}                                            ${RED}║${NC}"
+echo -e "${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${YELLOW}Your branch name:${NC}"
+echo -e "  ${DIM}\"${branch_name}\"${NC}"
+echo ""
+echo -e "${BLUE}┌─────────────────────────────────────────────────────────────┐${NC}"
+echo -e "${BLUE}│${NC} ${BOLD}Allowed formats:${NC}                                            ${BLUE}│${NC}"
+echo -e "${BLUE}└─────────────────────────────────────────────────────────────┘${NC}"
+echo ""
+echo -e "${CYAN}1. ClickUp ID:${NC}"
+echo -e "   ${GREEN}CU-xxxxxxxxx${NC}  ${DIM}(9 alphanumeric characters)${NC}"
+echo -e "   ${DIM}$${NC} git checkout -b \"${GREEN}CU-86b7f42fd${NC}\""
+echo ""
+echo -e "${CYAN}2. Conventional:${NC}"
+echo -e "   ${GREEN}<type>/<description>${NC}"
+echo -e "   Types: ${GREEN}feat${NC}, ${GREEN}fix${NC}, ${GREEN}docs${NC}, ${GREEN}style${NC}, ${GREEN}refactor${NC}, ${GREEN}perf${NC},"
+echo -e "          ${GREEN}test${NC}, ${GREEN}build${NC}, ${GREEN}ci${NC}, ${GREEN}chore${NC}, ${GREEN}hotfix${NC}, ${GREEN}release${NC}"
+echo -e "   ${DIM}$${NC} git checkout -b \"${GREEN}feat/user-login${NC}\""
+echo -e "   ${DIM}$${NC} git checkout -b \"${GREEN}fix/header-bug${NC}\""
+echo ""
+echo -e "${CYAN}3. Special branches:${NC}"
+echo -e "   ${GREEN}master${NC}, ${GREEN}main${NC}, ${GREEN}develop${NC}, ${GREEN}staging${NC}, ${GREEN}production${NC}"
+echo ""
+exit 1
+
+exit 0
