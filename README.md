@@ -7,6 +7,7 @@ Git hooks for development workflow automation.
 - **commit-msg**: Validates commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) format (with optional ClickUp ID)
 - **pre-commit**: Runs custom commands (lint, type check, format) from config file
 - **pre-push**: Validates branch naming + runs custom commands (tests) from config file
+- **File filtering**: Only run commands when specific file types are changed
 
 ## Installation
 
@@ -105,6 +106,7 @@ cp .dev-hooks.example.yml .dev-hooks.yml
 # Pre-commit commands (run on every commit)
 pre-commit:
   enabled: true
+  only_for_files: "*.py"  # Only run if .py files are staged
   commands:
     - name: "Lint Check"
       run: "ruff check src/"
@@ -115,6 +117,7 @@ pre-commit:
 pre-push:
   enabled: true
   skip_branch_validation: false
+  only_for_files: "*.py"  # Only run tests if .py files changed
   commands:
     - name: "Run Tests"
       run: "pytest"
@@ -125,6 +128,23 @@ docker:
   compose: true
   container: "app"
   compose_file: "docker-compose.yml"
+```
+
+### File Filtering
+
+Use `only_for_files` to run commands only when specific file types are changed:
+
+```yaml
+pre-commit:
+  only_for_files: "*.py"           # Single pattern
+
+pre-push:
+  only_for_files: "*.py, *.js"     # Multiple patterns (comma-separated)
+```
+
+If no matching files are found, commands are skipped with a message:
+```
+Skipping pre-push commands (no matching files: *.py)
 ```
 
 ### Docker Support

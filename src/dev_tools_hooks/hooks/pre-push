@@ -2,7 +2,7 @@
 
 # Pre-push hook
 # 1. Validates branch names (ClickUp ID or conventional format)
-# 2. Runs custom commands from .dev-hooks.yml config file
+# 2. Runs custom commands from .dev-hooks.yml config file (optionally filtered by file types)
 
 # Colors optimized for macOS Terminal
 RED='\x1b[31m'
@@ -26,7 +26,6 @@ branch_name=$(git symbolic-ref --short HEAD)
 # YAML Parser (simple, no dependencies)
 # ============================================================================
 
-# Get a simple value from yaml: yaml_get "key.subkey"
 yaml_get() {
     local key="$1"
     local file="$2"
@@ -36,7 +35,6 @@ yaml_get() {
         return
     fi
 
-    # Handle nested keys like "docker.enabled"
     if [[ "$key" == *"."* ]]; then
         local parent="${key%%.*}"
         local child="${key#*.}"
@@ -64,7 +62,6 @@ yaml_get() {
     fi
 }
 
-# Get list of commands from yaml
 yaml_get_commands() {
     local file="$1"
 
@@ -87,12 +84,59 @@ yaml_get_commands() {
             gsub(/^["'\'']|["'\'']$/, "")
             print name "|" $0
         }
-        in_commands && /^      allow_failure:/ {
-            gsub(/^      allow_failure:[ ]*/, "")
-            if ($0 == "true") allow_failure="true"
-            else allow_failure="false"
-        }
     ' "$file"
+}
+
+# ============================================================================
+# File Filter Check
+# ============================================================================
+
+# Check if there are changes matching the file filter
+has_matching_files() {
+    local filter="$1"
+
+    if [ -z "$filter" ]; then
+        # No filter, always run
+        return 0
+    fi
+
+    # Get the remote and branch we're pushing to
+    local remote_ref=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
+
+    if [ -z "$remote_ref" ]; then
+        # No upstream, check all commits on this branch vs main/master
+        local base_branch="main"
+        if ! git rev-parse --verify main >/dev/null 2>&1; then
+            base_branch="master"
+        fi
+        remote_ref="$base_branch"
+    fi
+
+    # Get list of changed files between remote and local
+    local changed_files=$(git diff --name-only "$remote_ref"...HEAD 2>/dev/null)
+
+    if [ -z "$changed_files" ]; then
+        # No changes to push
+        return 1
+    fi
+
+    # Check if any file matches the filter pattern
+    # Support multiple patterns separated by comma: "*.py,*.js"
+    IFS=',' read -ra patterns <<< "$filter"
+    for pattern in "${patterns[@]}"; do
+        # Trim whitespace
+        pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+        # Convert glob pattern to grep regex
+        # *.py -> \.py$
+        local regex=$(echo "$pattern" | sed 's/\./\\./g; s/\*/.*/g')
+
+        if echo "$changed_files" | grep -qE "$regex"; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 # ============================================================================
@@ -102,19 +146,13 @@ yaml_get_commands() {
 validate_branch() {
     local branch="$1"
 
-    # Check if validation is disabled
     local skip_validation=$(yaml_get "pre-push.skip_branch_validation" "$CONFIG_FILE")
     if [ "$skip_validation" = "true" ]; then
         return 0
     fi
 
-    # Allowed special branches
     local allowed_branches="^(master|main|develop|staging|production)$"
-
-    # ClickUp pattern: CU- followed by alphanumeric characters
     local clickup_pattern="^CU-[a-zA-Z0-9]+$"
-
-    # Conventional branch pattern: type/description
     local conventional_pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|hotfix|release)/.+$"
 
     if echo "$branch" | grep -qE "$allowed_branches"; then
@@ -129,7 +167,6 @@ validate_branch() {
         return 0
     fi
 
-    # Invalid branch name
     echo ""
     echo -e "${RED}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
     echo -e "${RED}${BOLD}│  ✖ PUSH REJECTED - Invalid branch name                       │${NC}"
@@ -165,10 +202,18 @@ run_commands() {
         return 0
     fi
 
-    # Check if pre-push is enabled
     local enabled=$(yaml_get "pre-push.enabled" "$CONFIG_FILE")
     if [ "$enabled" = "false" ]; then
         return 0
+    fi
+
+    # Check file filter
+    local only_for_files=$(yaml_get "pre-push.only_for_files" "$CONFIG_FILE")
+    if [ -n "$only_for_files" ]; then
+        if ! has_matching_files "$only_for_files"; then
+            echo -e "${DIM}Skipping pre-push commands (no matching files: ${only_for_files})${NC}"
+            return 0
+        fi
     fi
 
     # Check docker settings
@@ -179,7 +224,6 @@ run_commands() {
 
     [ -z "$compose_file" ] && compose_file="docker-compose.yml"
 
-    # Get commands
     local commands=$(yaml_get_commands "$CONFIG_FILE")
 
     if [ -z "$commands" ]; then
@@ -203,7 +247,6 @@ run_commands() {
         echo -e "${BLUE}▶${NC} ${WHITE}${BOLD}${name}${NC}"
         echo -e "  ${DIM}${cmd}${NC}"
 
-        # Build the actual command
         local full_cmd="$cmd"
 
         if [ "$docker_enabled" = "true" ]; then
@@ -214,7 +257,6 @@ run_commands() {
             fi
         fi
 
-        # Run command
         cd "$PROJECT_ROOT" || exit 1
 
         if eval "$full_cmd"; then
@@ -246,12 +288,10 @@ run_commands() {
 # Main
 # ============================================================================
 
-# Validate branch name
 if ! validate_branch "$branch_name"; then
     exit 1
 fi
 
-# Run custom commands
 if ! run_commands; then
     exit 1
 fi

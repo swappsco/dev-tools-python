@@ -2,6 +2,7 @@
 
 # Pre-commit hook for code quality checks
 # Runs custom commands from .dev-hooks.yml (lint, type check, format, etc.)
+# Optionally filtered by file types
 
 # Colors optimized for macOS Terminal
 RED='\x1b[31m'
@@ -92,19 +93,58 @@ yaml_get_commands() {
 }
 
 # ============================================================================
+# File Filter Check
+# ============================================================================
+
+has_matching_staged_files() {
+    local filter="$1"
+
+    if [ -z "$filter" ]; then
+        return 0
+    fi
+
+    # Get staged files
+    local staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+
+    if [ -z "$staged_files" ]; then
+        return 1
+    fi
+
+    # Check if any file matches the filter pattern
+    IFS=',' read -ra patterns <<< "$filter"
+    for pattern in "${patterns[@]}"; do
+        pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        local regex=$(echo "$pattern" | sed 's/\./\\./g; s/\*/.*/g')
+
+        if echo "$staged_files" | grep -qE "$regex"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+# ============================================================================
 # Run Commands from .dev-hooks.yml
 # ============================================================================
 
 run_commands() {
     if [ ! -f "$CONFIG_FILE" ]; then
-        # No config file, nothing to do
         exit 0
     fi
 
-    # Check if pre-commit is enabled
     local enabled=$(yaml_get "pre-commit.enabled" "$CONFIG_FILE")
     if [ "$enabled" = "false" ]; then
         exit 0
+    fi
+
+    # Check file filter
+    local only_for_files=$(yaml_get "pre-commit.only_for_files" "$CONFIG_FILE")
+    if [ -n "$only_for_files" ]; then
+        if ! has_matching_staged_files "$only_for_files"; then
+            echo -e "${DIM}Skipping pre-commit commands (no matching files: ${only_for_files})${NC}"
+            exit 0
+        fi
     fi
 
     # Check docker settings
@@ -115,7 +155,6 @@ run_commands() {
 
     [ -z "$compose_file" ] && compose_file="docker-compose.yml"
 
-    # Get commands
     local commands=$(yaml_get_commands "pre-commit" "$CONFIG_FILE")
 
     if [ -z "$commands" ]; then
@@ -139,7 +178,6 @@ run_commands() {
         echo -e "${BLUE}▶${NC} ${WHITE}${BOLD}${name}${NC}"
         echo -e "  ${DIM}${cmd}${NC}"
 
-        # Build the actual command
         local full_cmd="$cmd"
 
         if [ "$docker_enabled" = "true" ]; then
@@ -150,7 +188,6 @@ run_commands() {
             fi
         fi
 
-        # Run command
         cd "$PROJECT_ROOT" || exit 1
 
         if eval "$full_cmd"; then

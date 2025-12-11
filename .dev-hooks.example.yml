@@ -8,6 +8,10 @@ pre-commit:
   # Enable/disable pre-commit checks (default: true)
   enabled: true
 
+  # Only run if changes include these file patterns (optional)
+  # Supports multiple patterns: "*.py, *.js"
+  # only_for_files: "*.py"
+
   # Commands to run before commit
   commands:
     # Example: Run linter
@@ -32,9 +36,14 @@ pre-push:
   # Skip branch name validation (default: false)
   skip_branch_validation: false
 
+  # Only run commands if changes include these file patterns (optional)
+  # If no matching files are changed, commands are skipped
+  # Supports multiple patterns separated by comma: "*.py, *.js"
+  only_for_files: "*.py"
+
   # Commands to run before push
   commands:
-    # Example: Run tests
+    # Example: Run tests (only if .py files changed)
     - name: "Run Tests"
       run: "pytest"
 
@@ -59,31 +68,31 @@ docker:
 
 # --- Python Project ---
 # pre-commit:
+#   only_for_files: "*.py"
 #   commands:
 #     - name: "Lint"
 #       run: "ruff check ."
 #     - name: "Types"
 #       run: "mypy src/"
-#     - name: "Format"
-#       run: "ruff format --check ."
 # pre-push:
+#   only_for_files: "*.py"
 #   commands:
 #     - name: "Tests"
 #       run: "pytest -v"
 
 # --- Node.js Project ---
 # pre-commit:
+#   only_for_files: "*.js, *.ts, *.tsx"
 #   commands:
 #     - name: "Lint"
 #       run: "npm run lint"
 #     - name: "Types"
 #       run: "npm run typecheck"
 # pre-push:
+#   only_for_files: "*.js, *.ts, *.tsx"
 #   commands:
 #     - name: "Tests"
 #       run: "npm test"
-#     - name: "Build"
-#       run: "npm run build"
 
 # --- PHP/Drupal Project (Dockerized) ---
 # docker:
@@ -91,24 +100,26 @@ docker:
 #   compose: true
 #   container: "php"
 # pre-commit:
+#   only_for_files: "*.php, *.module, *.inc"
 #   commands:
 #     - name: "PHPCS"
 #       run: "vendor/bin/phpcs --standard=Drupal web/modules/custom"
 # pre-push:
+#   only_for_files: "*.php"
 #   commands:
 #     - name: "PHPUnit"
 #       run: "vendor/bin/phpunit"
 
 # --- Go Project ---
 # pre-commit:
+#   only_for_files: "*.go"
 #   commands:
 #     - name: "Vet"
 #       run: "go vet ./..."
 #     - name: "Fmt"
 #       run: "test -z $(gofmt -l .)"
 # pre-push:
+#   only_for_files: "*.go"
 #   commands:
 #     - name: "Tests"
 #       run: "go test ./..."
-#     - name: "Build"
-#       run: "go build ./..."
