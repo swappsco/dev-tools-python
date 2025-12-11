@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dev-tools-hooks"
 version = "1.0.0"
-description = "Git hooks for development workflow - Conventional Commits, PHPCS, and branch naming conventions"
+description = "Git hooks for development workflow - Conventional Commits, branch naming, and custom commands"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
 authors = [
     {name = "Swapps", email = "dev@swapps.com"}
 ]
-keywords = ["git", "hooks", "conventional-commits", "phpcs", "development"]
+keywords = ["git", "hooks", "conventional-commits", "development", "workflow"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

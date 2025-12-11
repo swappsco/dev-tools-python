@@ -132,8 +132,8 @@ def cmd_list(args: argparse.Namespace) -> int:
     print()
     print(f"{CYAN}Hook descriptions:{NC}")
     print(f"  {BOLD}commit-msg{NC}   - Validates Conventional Commits format")
-    print(f"  {BOLD}pre-commit{NC}   - Runs PHPCS for Drupal/WordPress projects")
-    print(f"  {BOLD}pre-push{NC}     - Validates branch naming conventions")
+    print(f"  {BOLD}pre-commit{NC}   - Runs custom commands (lint, type check, format)")
+    print(f"  {BOLD}pre-push{NC}     - Validates branch naming + runs custom commands")
 
     return 0
 
