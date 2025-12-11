@@ -5,13 +5,13 @@ Git hooks for development workflow automation.
 ## Features
 
 - **commit-msg**: Validates commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) format (with optional ClickUp ID)
-- **pre-commit**: Runs PHPCS code quality checks for Drupal and WordPress projects
-- **pre-push**: Validates branch naming + runs custom commands from config file
+- **pre-commit**: Runs custom commands (lint, type check, format) from config file
+- **pre-push**: Validates branch naming + runs custom commands (tests) from config file
 
 ## Installation
 
 ```bash
-pip install dev-tools-hooks
+pip install git+https://github.com/swapps/dev-tools-hooks.git
 ```
 
 Or install from source:
@@ -75,10 +75,10 @@ Examples:
 
 ### pre-commit
 
-For PHP projects (Drupal/WordPress), automatically:
-- Detects project type from `config.yml`
-- Installs PHPCS and coding standards if needed
-- Validates staged PHP files against coding standards
+Runs custom commands defined in `.dev-hooks.yml` before each commit:
+- Lint checks
+- Type checking
+- Format validation
 
 ### pre-push
 
@@ -87,11 +87,11 @@ For PHP projects (Drupal/WordPress), automatically:
    - Conventional: `<type>/<description>` (e.g., `feat/user-login`, `fix/header-bug`)
    - Special branches: `master`, `main`, `develop`, `staging`, `production`
 
-2. **Custom commands** - Runs commands defined in `.dev-hooks.yml` before pushing
+2. **Custom commands** - Runs commands defined in `.dev-hooks.yml` (tests, build, etc.)
 
 ## Configuration File
 
-Create a `.dev-hooks.yml` file in your project root to configure custom pre-push commands.
+Create a `.dev-hooks.yml` file in your project root to configure custom commands.
 
 Copy the example file to get started:
 
@@ -102,20 +102,22 @@ cp .dev-hooks.example.yml .dev-hooks.yml
 ### Example Configuration
 
 ```yaml
-# Pre-push commands
+# Pre-commit commands (run on every commit)
+pre-commit:
+  enabled: true
+  commands:
+    - name: "Lint Check"
+      run: "ruff check src/"
+    - name: "Type Check"
+      run: "mypy src/"
+
+# Pre-push commands (run before push)
 pre-push:
   enabled: true
   skip_branch_validation: false
-
   commands:
     - name: "Run Tests"
       run: "pytest"
-
-    - name: "Lint Check"
-      run: "ruff check src/"
-
-    - name: "Type Check"
-      run: "mypy src/"
 
 # Docker support (optional)
 docker:
@@ -133,17 +135,22 @@ For dockerized projects, enable docker execution:
 docker:
   enabled: true
   compose: true
-  container: "php"
+  container: "app"
+
+pre-commit:
+  commands:
+    - name: "Lint"
+      run: "npm run lint"
 
 pre-push:
   commands:
-    - name: "PHPUnit"
-      run: "vendor/bin/phpunit"
+    - name: "Tests"
+      run: "npm test"
 ```
 
 Commands will be executed inside the container:
 ```bash
-docker-compose exec -T php vendor/bin/phpunit
+docker-compose exec -T app npm run lint
 ```
 
 ## Development
@@ -162,4 +169,4 @@ dev-hooks --help
 
 ## License
 
-MIT
+MIT - Copyright (c) 2025 Swapps
