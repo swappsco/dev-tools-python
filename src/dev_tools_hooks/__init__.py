@@ -8,7 +8,7 @@ This package provides git hooks for:
 """
 
 __version__ = "1.0.0"
-__author__ = "Dev Tools"
+__author__ = "Swapps"
 
 from .installer import install_hooks, uninstall_hooks
 

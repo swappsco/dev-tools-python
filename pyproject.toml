@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
 authors = [
-    {name = "Dev Tools", email = "dev@example.com"}
+    {name = "Swapps", email = "dev@swapps.com"}
 ]
 keywords = ["git", "hooks", "conventional-commits", "phpcs", "development"]
 classifiers = [
@@ -32,8 +32,8 @@ classifiers = [
 dev-hooks = "dev_tools_hooks.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/dev/dev-tools-hooks"
-Repository = "https://github.com/dev/dev-tools-hooks"
+Homepage = "https://github.com/swapps/dev-tools-hooks"
+Repository = "https://github.com/swapps/dev-tools-hooks"
 
 [tool.setuptools.packages.find]
 where = ["src"]
