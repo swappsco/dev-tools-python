@@ -1,0 +1,58 @@
+# Dev Tools Hooks Configuration
+# Copy this file to .dev-hooks.yml in your project root
+
+# Pre-push commands
+# These commands run before pushing to remote
+# If any command fails, the push is aborted
+pre-push:
+  # Enable/disable pre-push checks (default: true)
+  enabled: true
+
+  # Skip branch name validation (default: false)
+  skip_branch_validation: false
+
+  # Commands to run before push
+  # Each command runs in sequence, push is aborted if any fails
+  commands:
+    # Example: Run tests
+    - name: "Run Tests"
+      run: "pytest"
+      # Optional: only run for specific branches (regex)
+      # branches: "^(feat|fix)/.*"
+
+    # Example: Run linter
+    - name: "Lint Check"
+      run: "ruff check src/"
+
+    # Example: Type checking
+    - name: "Type Check"
+      run: "mypy src/"
+      # Optional: allow this command to fail without blocking push
+      allow_failure: false
+
+# Docker support
+# If your project runs in Docker, configure it here
+docker:
+  # Enable docker execution (default: false)
+  enabled: false
+
+  # Container name or service name (for docker-compose)
+  container: "app"
+
+  # Use docker-compose instead of docker exec (default: false)
+  compose: true
+
+  # docker-compose file path (default: docker-compose.yml)
+  compose_file: "docker-compose.yml"
+
+# Examples for different project types:
+
+# --- Python Project ---
+# pre-push:
+#   commands:
+#     - name: "Tests"
+#       run: "pytest -v"
+#     - name: "Lint"
+#       run: "ruff check ."
+#     - name: "Types"
+#       run: "mypy src/"
