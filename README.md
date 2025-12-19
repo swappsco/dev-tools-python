@@ -4,10 +4,13 @@ Git hooks for development workflow automation.
 
 ## Features
 
-- **commit-msg**: Validates commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) format (with optional ClickUp ID)
+- **commit-msg**: Validates commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) format
 - **pre-commit**: Runs custom commands (lint, type check, format) from config file
 - **pre-push**: Validates branch naming + runs custom commands (tests) from config file
+- **Django Smart Tests**: Run tests only for modified apps/modules instead of all tests
+- **Test Detection**: Warns about modified files without corresponding tests
 - **File filtering**: Only run commands when specific file types are changed
+- **Tag Support**: Allows pushing git tags without validation
 
 ## Installation
 
@@ -63,7 +66,6 @@ Validates that commit messages follow Conventional Commits format:
 
 ```
 <type>(<optional-scope>): <description>
-CU-xxxxxxxxx - <type>(<optional-scope>): <description>
 ```
 
 Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
@@ -71,8 +73,7 @@ Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`
 Examples:
 - `feat: add user authentication`
 - `fix(api): resolve timeout issue`
-- `CU-86b7kybxx - feat: add git hooks`
-- `CU-86b7kybxx - fix(auth): resolve login bug`
+- `docs: update README`
 
 ### pre-commit
 
@@ -80,15 +81,20 @@ Runs custom commands defined in `.dev-hooks.yml` before each commit:
 - Lint checks
 - Type checking
 - Format validation
+- **Django test detection**: Warns if modified Python files don't have corresponding tests (configurable)
 
 ### pre-push
 
-1. **Branch validation** - Validates branch names follow one of these formats:
+1. **Tag support** - Allows pushing git tags without any validation
+
+2. **Branch validation** - Validates branch names follow one of these formats:
    - ClickUp ID: `CU-xxxxxxxxx`
    - Conventional: `<type>/<description>` (e.g., `feat/user-login`, `fix/header-bug`)
    - Special branches: `master`, `main`, `develop`, `staging`, `production`
 
-2. **Custom commands** - Runs commands defined in `.dev-hooks.yml` (tests, build, etc.)
+3. **Django Smart Tests** - Runs tests only for modified apps/modules (configurable)
+
+4. **Custom commands** - Runs commands defined in `.dev-hooks.yml` (tests, build, etc.)
 
 ## Configuration File
 
@@ -145,6 +151,45 @@ pre-push:
 If no matching files are found, commands are skipped with a message:
 ```
 Skipping pre-push commands (no matching files: *.py)
+```
+
+### Django Smart Tests
+
+For Django/Python projects, enable smart test features:
+
+```yaml
+pre-commit:
+  # Warn about modified files without tests (default: true)
+  django_check_tests: true
+
+pre-push:
+  # Run tests only for modified apps (default: true)
+  django_smart_tests: true
+  # Test command (default: "pytest")
+  django_test_command: "pytest"
+```
+
+**How it works:**
+
+1. **pre-commit**: Analyzes staged Python files and warns if they don't have corresponding test files (e.g., `test_<filename>.py`). This is just a warning and won't block the commit.
+
+2. **pre-push**: Detects which Django apps/modules were modified and runs tests only for those apps instead of the entire test suite:
+   ```bash
+   # Instead of: pytest
+   # Runs: pytest app1 app2
+   ```
+
+Example output:
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Running Django Smart Tests...                               │
+└──────────────────────────────────────────────────────────────┘
+
+Modified apps: users api payments
+
+▶ Smart Tests
+  pytest users api payments
+  ✔ Passed
 ```
 
 ### Docker Support
