@@ -20,7 +20,21 @@ NC='\x1b[0m'
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 CONFIG_FILE="$PROJECT_ROOT/.dev-hooks.yml"
 
-branch_name=$(git symbolic-ref --short HEAD)
+# Check if we're pushing a tag (allow without validation)
+# Read stdin to detect tag pushes
+while read local_ref local_sha remote_ref remote_sha; do
+    if [[ "$local_ref" == refs/tags/* ]]; then
+        # Pushing a tag, allow it
+        exit 0
+    fi
+done
+
+branch_name=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# If we can't get branch name (detached HEAD, etc.), allow push
+if [ -z "$branch_name" ]; then
+    exit 0
+fi
 
 # ============================================================================
 # YAML Parser (simple, no dependencies)
@@ -194,6 +208,122 @@ validate_branch() {
 }
 
 # ============================================================================
+# Django Smart Tests
+# ============================================================================
+
+get_modified_django_apps() {
+    # Get the remote ref to compare against
+    local remote_ref=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
+
+    if [ -z "$remote_ref" ]; then
+        local base_branch="main"
+        if ! git rev-parse --verify main >/dev/null 2>&1; then
+            base_branch="master"
+        fi
+        remote_ref="$base_branch"
+    fi
+
+    # Get modified Python files
+    local changed_files=$(git diff --name-only "$remote_ref"...HEAD 2>/dev/null | grep '\.py$')
+
+    if [ -z "$changed_files" ]; then
+        echo ""
+        return
+    fi
+
+    # Extract unique app/module directories
+    local apps=()
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+
+        # Get the top-level directory (app name)
+        local app=$(echo "$file" | cut -d'/' -f1)
+
+        # Skip common non-app directories
+        if [[ "$app" == "tests" ]] || [[ "$app" == "migrations" ]] || \
+           [[ "$app" == "docs" ]] || [[ "$app" == "scripts" ]] || \
+           [[ "$app" == "config" ]] || [[ "$app" == "settings" ]] || \
+           [[ "$app" == "manage.py" ]] || [[ "$app" == "setup.py" ]] || \
+           [[ "$app" == "conftest.py" ]]; then
+            continue
+        fi
+
+        # Check if it's a valid directory with Python files
+        if [ -d "$PROJECT_ROOT/$app" ]; then
+            # Add to array if not already present
+            if [[ ! " ${apps[*]} " =~ " ${app} " ]]; then
+                apps+=("$app")
+            fi
+        fi
+    done <<< "$changed_files"
+
+    echo "${apps[*]}"
+}
+
+run_django_smart_tests() {
+    local smart_tests=$(yaml_get "pre-push.django_smart_tests" "$CONFIG_FILE")
+
+    # Default to true if not specified
+    if [ "$smart_tests" = "false" ]; then
+        return 0
+    fi
+
+    local test_command=$(yaml_get "pre-push.django_test_command" "$CONFIG_FILE")
+    [ -z "$test_command" ] && test_command="pytest"
+
+    local apps=$(get_modified_django_apps)
+
+    if [ -z "$apps" ]; then
+        echo -e "${DIM}No Python apps modified, skipping smart tests${NC}"
+        return 0
+    fi
+
+    # Check docker settings
+    local docker_enabled=$(yaml_get "docker.enabled" "$CONFIG_FILE")
+    local docker_compose=$(yaml_get "docker.compose" "$CONFIG_FILE")
+    local docker_container=$(yaml_get "docker.container" "$CONFIG_FILE")
+    local compose_file=$(yaml_get "docker.compose_file" "$CONFIG_FILE")
+    [ -z "$compose_file" ] && compose_file="docker-compose.yml"
+
+    echo ""
+    echo -e "${CYAN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}${BOLD}│  Running Django Smart Tests...                               │${NC}"
+    echo -e "${CYAN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
+    echo ""
+    echo -e "${WHITE}${BOLD}Modified apps:${NC} ${MAGENTA}${apps}${NC}"
+    echo ""
+
+    local full_cmd="$test_command $apps"
+
+    if [ "$docker_enabled" = "true" ]; then
+        if [ "$docker_compose" = "true" ]; then
+            full_cmd="docker-compose -f $compose_file exec -T $docker_container $test_command $apps"
+        else
+            full_cmd="docker exec $docker_container $test_command $apps"
+        fi
+    fi
+
+    echo -e "${BLUE}▶${NC} ${WHITE}${BOLD}Smart Tests${NC}"
+    echo -e "  ${DIM}${full_cmd}${NC}"
+
+    cd "$PROJECT_ROOT" || exit 1
+
+    if eval "$full_cmd"; then
+        echo -e "  ${GREEN}✔ Passed${NC}"
+        echo ""
+        return 0
+    else
+        echo -e "  ${RED}✖ Failed${NC}"
+        echo ""
+        echo -e "${RED}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
+        echo -e "${RED}${BOLD}│  ✖ PUSH REJECTED - Django smart tests failed                 │${NC}"
+        echo -e "${RED}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
+        echo ""
+        return 1
+    fi
+}
+
+# ============================================================================
 # Run Custom Commands
 # ============================================================================
 
@@ -289,6 +419,11 @@ run_commands() {
 # ============================================================================
 
 if ! validate_branch "$branch_name"; then
+    exit 1
+fi
+
+# Run Django smart tests (if enabled)
+if ! run_django_smart_tests; then
     exit 1
 fi
 

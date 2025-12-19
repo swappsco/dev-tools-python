@@ -125,6 +125,71 @@ has_matching_staged_files() {
 }
 
 # ============================================================================
+# Django Test Detection
+# ============================================================================
+
+check_django_tests() {
+    local check_enabled=$(yaml_get "pre-commit.django_check_tests" "$CONFIG_FILE")
+
+    # Default to true if not specified
+    if [ "$check_enabled" = "false" ]; then
+        return 0
+    fi
+
+    # Get staged Python files (excluding tests, migrations, __init__.py)
+    local staged_py_files=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.py$' | grep -v 'test' | grep -v 'migrations' | grep -v '__init__.py' | grep -v 'conftest.py' | grep -v 'setup.py' | grep -v 'manage.py')
+
+    if [ -z "$staged_py_files" ]; then
+        return 0
+    fi
+
+    local missing_tests=()
+
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+
+        # Get the directory and filename
+        local dir=$(dirname "$file")
+        local filename=$(basename "$file" .py)
+
+        # Skip if it's already a test file
+        if [[ "$filename" == test_* ]] || [[ "$filename" == *_test ]]; then
+            continue
+        fi
+
+        # Look for corresponding test file
+        local test_file_1="${dir}/test_${filename}.py"
+        local test_file_2="${dir}/tests/test_${filename}.py"
+        local test_file_3="${dir}/${filename}_test.py"
+        local test_file_4="${dir}/tests.py"
+
+        # Check if any test file exists
+        if [ ! -f "$PROJECT_ROOT/$test_file_1" ] && \
+           [ ! -f "$PROJECT_ROOT/$test_file_2" ] && \
+           [ ! -f "$PROJECT_ROOT/$test_file_3" ] && \
+           [ ! -f "$PROJECT_ROOT/$test_file_4" ]; then
+            missing_tests+=("$file")
+        fi
+    done <<< "$staged_py_files"
+
+    if [ ${#missing_tests[@]} -gt 0 ]; then
+        echo ""
+        echo -e "${YELLOW}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
+        echo -e "${YELLOW}${BOLD}│  ⚠ WARNING: Modified files without corresponding tests      │${NC}"
+        echo -e "${YELLOW}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
+        echo ""
+        for file in "${missing_tests[@]}"; do
+            echo -e "  ${DIM}•${NC} ${WHITE}${file}${NC}"
+        done
+        echo ""
+        echo -e "${DIM}Consider adding tests for these files.${NC}"
+        echo ""
+    fi
+
+    return 0
+}
+
+# ============================================================================
 # Run Commands from .dev-hooks.yml
 # ============================================================================
 
@@ -217,6 +282,9 @@ run_commands() {
 # ============================================================================
 # Main
 # ============================================================================
+
+# Check for missing tests (warning only)
+check_django_tests
 
 run_commands
 exit 0

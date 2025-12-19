@@ -2,7 +2,6 @@
 
 # Conventional Commits validation hook
 # Valid prefixes: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
-# Supports ClickUp ID prefix: CU-xxxxxxxxx - type: description
 
 commit_msg_file=$1
 commit_msg=$(cat "$commit_msg_file")
@@ -14,9 +13,9 @@ types="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
 # Format: type(optional-scope): description
 pattern="^($types)(\(.+\))?: .+"
 
-# Pattern with ClickUp ID prefix
+# Pattern with ClickUp ID prefix (disabled - kept for future use if needed)
 # Format: CU-xxxxxxxxx - type(optional-scope): description
-clickup_pattern="^CU-[a-zA-Z0-9]+ - ($types)(\(.+\))?: .+"
+# clickup_pattern="^CU-[a-zA-Z0-9]+ - ($types)(\(.+\))?: .+"
 
 # Allow merge commits
 merge_pattern="^Merge (branch|pull request|remote-tracking branch) .+"
@@ -29,9 +28,10 @@ if echo "$commit_msg" | grep -qE "$pattern"; then
     exit 0
 fi
 
-if echo "$commit_msg" | grep -qE "$clickup_pattern"; then
-    exit 0
-fi
+# ClickUp pattern validation disabled
+# if echo "$commit_msg" | grep -qE "$clickup_pattern"; then
+#     exit 0
+# fi
 
 # Colors optimized for macOS Terminal
 RED='\x1b[31m'
@@ -53,15 +53,10 @@ echo ""
 echo -e "${WHITE}${BOLD}Your message:${NC}"
 echo -e "  ${DIM}\"${commit_msg}\"${NC}"
 echo ""
-echo -e "${CYAN}${BOLD}Expected formats:${NC}"
+echo -e "${CYAN}${BOLD}Expected format:${NC}"
 echo ""
-echo -e "  ${WHITE}1. Conventional Commit:${NC}"
-echo -e "     ${GREEN}<type>${NC}${DIM}:${NC} ${WHITE}<description>${NC}"
-echo -e "     ${GREEN}<type>${NC}${DIM}(${NC}${YELLOW}scope${NC}${DIM}):${NC} ${WHITE}<description>${NC}"
-echo ""
-echo -e "  ${WHITE}2. With ClickUp ID:${NC}"
-echo -e "     ${MAGENTA}CU-xxxxxxxxx${NC} ${DIM}-${NC} ${GREEN}<type>${NC}${DIM}:${NC} ${WHITE}<description>${NC}"
-echo -e "     ${MAGENTA}CU-xxxxxxxxx${NC} ${DIM}-${NC} ${GREEN}<type>${NC}${DIM}(${NC}${YELLOW}scope${NC}${DIM}):${NC} ${WHITE}<description>${NC}"
+echo -e "  ${GREEN}<type>${NC}${DIM}:${NC} ${WHITE}<description>${NC}"
+echo -e "  ${GREEN}<type>${NC}${DIM}(${NC}${YELLOW}scope${NC}${DIM}):${NC} ${WHITE}<description>${NC}"
 echo ""
 echo -e "${CYAN}${BOLD}Valid types:${NC}"
 echo -e "  ${GREEN}feat${NC}      ${DIM}A new feature${NC}"
@@ -79,7 +74,5 @@ echo ""
 echo -e "${CYAN}${BOLD}Examples:${NC}"
 echo -e "  ${DIM}\$${NC} git commit -m \"${GREEN}feat${NC}: add user authentication\""
 echo -e "  ${DIM}\$${NC} git commit -m \"${GREEN}fix${NC}(${YELLOW}api${NC}): resolve timeout issue\""
-echo -e "  ${DIM}\$${NC} git commit -m \"${MAGENTA}CU-86b7kybxx${NC} - ${GREEN}feat${NC}: add git hooks\""
-echo -e "  ${DIM}\$${NC} git commit -m \"${MAGENTA}CU-86b7kybxx${NC} - ${GREEN}fix${NC}(${YELLOW}auth${NC}): resolve login bug\""
 echo ""
 exit 1

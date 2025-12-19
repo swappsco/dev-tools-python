@@ -12,6 +12,11 @@ pre-commit:
   # Supports multiple patterns: "*.py, *.js"
   # only_for_files: "*.py"
 
+  # Django smart test detection (default: true)
+  # Warns if modified Python files don't have corresponding tests
+  # This is just a warning, it won't block the commit
+  django_check_tests: true
+
   # Commands to run before commit
   commands:
     # Example: Run linter
@@ -41,9 +46,18 @@ pre-push:
   # Supports multiple patterns separated by comma: "*.py, *.js"
   only_for_files: "*.py"
 
+  # Django smart tests (default: true)
+  # When enabled, runs tests only for modified Django apps instead of all tests
+  # Detects which apps were modified and runs: pytest <app1> <app2> ...
+  django_smart_tests: true
+
+  # Test command for Django smart tests (default: "pytest")
+  django_test_command: "pytest"
+
   # Commands to run before push
   commands:
     # Example: Run tests (only if .py files changed)
+    # Note: If django_smart_tests is enabled, this will be replaced with smart test execution
     - name: "Run Tests"
       run: "pytest"
 
