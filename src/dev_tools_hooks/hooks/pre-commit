@@ -257,7 +257,7 @@ run_commands() {
 
         cd "$PROJECT_ROOT" || exit 1
 
-        if eval "$full_cmd"; then
+        if eval "$full_cmd" </dev/null; then
             echo -e "  ${GREEN}✔ Passed${NC}"
         else
             echo -e "  ${RED}✖ Failed${NC}"
