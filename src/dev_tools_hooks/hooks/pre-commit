@@ -47,6 +47,7 @@ yaml_get() {
             in_section && /^[a-zA-Z]/ { in_section=0 }
             in_section && $0 ~ "^  "child":" {
                 gsub(/^  [a-zA-Z_-]+:[ ]*/, "")
+                gsub(/^[ \t]+|[ \t]+$/, "")
                 gsub(/^["'\'']|["'\'']$/, "")
                 gsub(/^[ \t]+|[ \t]+$/, "")
                 print
@@ -57,6 +58,7 @@ yaml_get() {
         awk -v key="$key" '
             $0 ~ "^"key":" {
                 gsub(/^[a-zA-Z_-]+:[ ]*/, "")
+                gsub(/^[ \t]+|[ \t]+$/, "")
                 gsub(/^["'\'']|["'\'']$/, "")
                 gsub(/^[ \t]+|[ \t]+$/, "")
                 print
