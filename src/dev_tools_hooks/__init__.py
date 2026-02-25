@@ -7,7 +7,7 @@ This package provides git hooks for:
 - Branch naming validation and custom commands (pre-push)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 __author__ = "Swapps"
 
 from .installer import install_hooks, uninstall_hooks
