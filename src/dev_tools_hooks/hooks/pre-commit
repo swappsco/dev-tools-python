@@ -77,11 +77,18 @@ yaml_get_commands() {
     fi
 
     awk -v section="$section" '
+        function emit() {
+            if (name != "" && cmd != "") {
+                print name "|" cmd "|" cmd_docker
+                name=""; cmd=""; cmd_docker=""
+            }
+        }
         $0 ~ "^"section":" { in_section=1; next }
-        in_section && /^[a-zA-Z]/ { in_section=0 }
+        in_section && /^[a-zA-Z]/ { emit(); in_section=0; in_commands=0 }
         in_section && /^  commands:/ { in_commands=1; next }
-        in_commands && /^  [a-zA-Z]/ { in_commands=0 }
+        in_commands && /^  [a-zA-Z]/ { emit(); in_commands=0 }
         in_commands && /^    - name:/ {
+            emit()
             gsub(/^    - name:[ ]*/, "")
             gsub(/^["'\'']|["'\'']$/, "")
             name=$0
@@ -89,8 +96,14 @@ yaml_get_commands() {
         in_commands && /^      run:/ {
             gsub(/^      run:[ ]*/, "")
             gsub(/^["'\'']|["'\'']$/, "")
-            print name "|" $0
+            cmd=$0
         }
+        in_commands && /^      docker:/ {
+            gsub(/^      docker:[ ]*/, "")
+            gsub(/^["'\'']|["'\'']$/, "")
+            cmd_docker=$0
+        }
+        END { emit() }
     ' "$file"
 }
 
@@ -240,14 +253,16 @@ run_commands() {
         [ -z "$line" ] && continue
 
         local name="${line%%|*}"
-        local cmd="${line#*|}"
+        local rest="${line#*|}"
+        local cmd="${rest%%|*}"
+        local cmd_docker="${rest##*|}"
 
         echo -e "${BLUE}▶${NC} ${WHITE}${BOLD}${name}${NC}"
         echo -e "  ${DIM}${cmd}${NC}"
 
         local full_cmd="$cmd"
 
-        if [ "$docker_enabled" = "true" ]; then
+        if [ "$docker_enabled" = "true" ] && [ "$cmd_docker" != "false" ]; then
             if [ "$docker_compose" = "true" ]; then
                 full_cmd="docker-compose -f $compose_file exec -T $docker_container $cmd"
             else
