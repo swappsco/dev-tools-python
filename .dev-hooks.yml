@@ -13,6 +13,10 @@ pre-push:
   enabled: true
   skip_branch_validation: false
 
+  # Django smart tests - run tests only for modified apps
+  django_smart_tests: true
+  django_test_command: "pytest -n auto"
+
   commands:
     - name: "Check CLI"
       run: "venv/bin/dev-hooks --version"
