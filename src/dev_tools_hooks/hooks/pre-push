@@ -4,6 +4,8 @@
 # 1. Validates branch names (ClickUp ID or conventional format)
 # 2. Runs custom commands from .dev-hooks.yml config file (optionally filtered by file types)
 
+DEV_HOOKS_VERSION="1.2.0"
+
 # Colors optimized for macOS Terminal
 RED='\x1b[31m'
 GREEN='\x1b[32m'
@@ -377,7 +379,7 @@ run_commands() {
 
     echo ""
     echo -e "${CYAN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}${BOLD}│  Running pre-push checks...                                  │${NC}"
+    echo -e "${CYAN}${BOLD}│  Running pre-push checks...              ${DIM}v${DEV_HOOKS_VERSION}${NC}${CYAN}${BOLD}               │${NC}"
     echo -e "${CYAN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
     echo ""
 
